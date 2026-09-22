@@ -323,16 +323,35 @@ static void handle_input(void) {
 static void init_graphics(void) {
     sceGuInit();
     gu_start();
+
     sceGuDrawBuffer(GU_PSM_8888,(void*)0,512);
     sceGuDispBuffer(SCREEN_W,SCREEN_H,(void*)0x88000,512);
     sceGuDepthBuffer((void*)0x110000,512);
+
     sceGuOffset(2048-(SCREEN_W/2),2048-(SCREEN_H/2));
     sceGuViewport(2048,2048,SCREEN_W,SCREEN_H);
     sceGuDepthRange(65535,0);
     sceGuScissor(0,0,SCREEN_W,SCREEN_H);
     sceGuEnable(GU_SCISSOR_TEST);
     sceGuDisable(GU_DEPTH_TEST);
-    sceGuFinish(); sceGuSync(0,0); sceGuDisplay(GU_TRUE);
+    sceGuDisable(GU_TEXTURE_2D);
+    sceGuDisable(GU_BLEND);
+
+    /* Use a real orthographic 2D projection: (0,0) is top-left and
+       (480,272) is bottom-right. This fixes the stretched/offset shapes. */
+    sceGumMatrixMode(GU_PROJECTION);
+    sceGumLoadIdentity();
+    sceGumOrtho(0.0f,(float)SCREEN_W,(float)SCREEN_H,0.0f,-1.0f,1.0f);
+
+    sceGumMatrixMode(GU_VIEW);
+    sceGumLoadIdentity();
+
+    sceGumMatrixMode(GU_MODEL);
+    sceGumLoadIdentity();
+
+    sceGuFinish();
+    sceGuSync(0,0);
+    sceGuDisplay(GU_TRUE);
 }
 
 int main(void) {
@@ -348,6 +367,21 @@ int main(void) {
         if(camy<0)camy=0; if(camy>WORLD_H-SCREEN_H)camy=WORLD_H-SCREEN_H;
 
         gu_start();
+
+        /* Clear the whole frame before drawing the next world view. */
+        sceGuClearColor(GU_RGBA(92,205,255,255));
+        sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
+
+        /* Re-load the 2D matrices each frame because GU state can be
+           modified by drawing helpers. */
+        sceGumMatrixMode(GU_PROJECTION);
+        sceGumLoadIdentity();
+        sceGumOrtho(0.0f,(float)SCREEN_W,(float)SCREEN_H,0.0f,-1.0f,1.0f);
+        sceGumMatrixMode(GU_VIEW);
+        sceGumLoadIdentity();
+        sceGumMatrixMode(GU_MODEL);
+        sceGumLoadIdentity();
+
         draw_background(camx,camy);
         draw_landmarks(camx,camy);
         draw_orbs(camx,camy);
