@@ -1,0 +1,27 @@
+name: Build Frutiger Aero World for PSP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v6
+
+      - name: Build with PSPDEV
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/project" \
+            -w /project \
+            ghcr.io/pspdev/pspdev:latest \
+            bash -lc 'export PSPDEV=/usr/local/pspdev; export PATH=$PSPDEV/bin:$PATH; make clean all'
+
+      - name: Upload EBOOT.PBP
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrutigerAeroWorld-PSP
+          path: EBOOT.PBP
+          if-no-files-found: error
